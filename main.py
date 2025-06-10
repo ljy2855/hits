@@ -170,7 +170,7 @@ async def create_widget(request: Request, style: WidgetStyle = None):
     
     # Get server host from request
     host = request.headers.get("host", "your-server-address")
-    base_url = f"http://{host}"
+    base_url = f"https://{host}"
     
     return {
         "widget_id": widget_id,
