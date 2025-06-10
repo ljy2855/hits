@@ -11,6 +11,7 @@ import base64
 import aiofiles
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
+import time
 
 app = FastAPI()
 
@@ -172,10 +173,13 @@ async def create_widget(request: Request, style: WidgetStyle = None):
     host = request.headers.get("host", "your-server-address")
     base_url = f"https://{host}"
     
+    # Add cache parameter to bypass cache
+    widget_url = f"/widget/{widget_id}/count.svg?cache=0"
+    
     return {
         "widget_id": widget_id,
-        "widget_url": f"/widget/{widget_id}/count.svg",
-        "markdown_code": f"![Visitor Count]({base_url}/widget/{widget_id}/count.svg)",
+        "widget_url": widget_url,
+        "markdown_code": f"![Visitor Count]({base_url}{widget_url})",
         "config": config.model_dump()
     }
 
@@ -198,7 +202,14 @@ async def get_widget_svg(widget_id: str):
     # 항상 GitHub 스타일 SVG 생성
     svg = await _generate_github_style_svg(data, style)
     
-    return Response(content=svg, media_type="image/svg+xml")
+    # 캐시 컨트롤 헤더 추가
+    headers = {
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        "Pragma": "no-cache",
+        "Expires": "0"
+    }
+    
+    return Response(content=svg, media_type="image/svg+xml", headers=headers)
 
 @app.put("/widget/{widget_id}/style")
 async def update_widget_style(widget_id: str, style: WidgetStyle):
