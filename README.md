@@ -19,7 +19,7 @@ A beautiful, customizable visitor counter widget for your GitHub profile or any 
 
 Example:
 ```markdown
-![Visitor Count](https://hits.cspc.me/widget/YOUR_WIDGET_ID/count.svg)
+![Visitor Count](https://hits.cspc.me/widget/profile/YOUR_WIDGET_ID/count.svg)
 ```
 
 ## Customization Options
