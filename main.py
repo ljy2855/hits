@@ -179,7 +179,7 @@ async def create_widget(request: Request, style: WidgetStyle = None):
     return {
         "widget_id": widget_id,
         "widget_url": widget_url,
-        "markdown_code": f"![Visitor Count]({base_url}{widget_url})",
+        "markdown_code": f'<a href="{base_url}">\n    <img src="{base_url}{widget_url}">\n</a>',
         "config": config.model_dump()
     }
 

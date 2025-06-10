@@ -2,7 +2,9 @@
 
 A beautiful, customizable visitor counter widget for your GitHub profile or any markdown document. Inspired by GitHub's design language, this widget provides a clean and modern way to track visitors to your content.
 
-![Visitor Count](https://hits.cspc.me/widget/2832f5f5-4f41-4ae7-9156-7d2dab3c570a/count.svg?cache=0)
+<a href="https://hits.cspc.me">
+    <img src="https://hits.cspc.me/widget/2832f5f5-4f41-4ae7-9156-7d2dab3c570a/count.svg?cache=0">
+</a>
 
 ## How to Use
 
