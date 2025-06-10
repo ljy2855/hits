@@ -136,7 +136,7 @@ async def get_visitor_count(widget_id: str):
     widget = await widgets_collection.find_one({"widget_id": widget_id})
     if widget:
         return widget
-    return {"count": 0, "widget_id": widget_id}
+    return None
 
 async def save_widget_data(widget_id: str, count: int, config: WidgetConfig):
     await widgets_collection.update_one(
@@ -154,11 +154,12 @@ async def save_widget_data(widget_id: str, count: int, config: WidgetConfig):
 @app.middleware("http")
 async def count_visitors(request: Request, call_next):
     path = request.url.path
-    if path.startswith("/widget/"):
-        widget_id = path.split("/")[2]
+    if path.startswith("/widget/profile/"):
+        widget_id = path.split("/")[3]
         data = await get_visitor_count(widget_id)
-        data["count"] += 1
-        await save_widget_data(widget_id, data["count"], WidgetConfig(**data.get("config", {})))
+        if data:
+            data["count"] += 1
+            await save_widget_data(widget_id, data["count"], WidgetConfig(**data.get("config", {})))
     
     response = await call_next(request)
     return response
@@ -173,13 +174,13 @@ async def create_widget(request: Request, style: WidgetStyle = None):
     host = request.headers.get("host", "your-server-address")
     base_url = f"https://{host}"
     
-    # Use a path-based approach instead of query parameters
-    widget_url = f"/widget/profile/{widget_id}/count.svg"
+    # Use a path-based approach without file extension
+    widget_url = f"/widget/profile/{widget_id}"
     
     return {
         "widget_id": widget_id,
         "widget_url": widget_url,
-        "markdown_code": f'<a href="{base_url}">\n    <img src="{base_url}{widget_url}">\n</a>',
+        "markdown_code": f"![Visitor Count]({base_url}{widget_url})",
         "config": config.model_dump()
     }
 
@@ -190,11 +191,7 @@ async def get_widget_count(widget_id: str):
         raise HTTPException(status_code=404, detail="Widget not found")
     return data
 
-@app.get("/widget/{widget_id}/count.svg")
-async def get_widget_svg_legacy(widget_id: str):
-    return await get_widget_svg(widget_id)
-
-@app.get("/widget/profile/{widget_id}/count.svg")
+@app.get("/widget/profile/{widget_id}")
 async def get_widget_svg(widget_id: str):
     data = await get_visitor_count(widget_id)
     if not data:
