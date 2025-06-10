@@ -6,6 +6,8 @@ A beautiful, customizable visitor counter widget for your GitHub profile or any 
 
 ## How to Use
 
+<img width="1339" alt="image" src="https://github.com/user-attachments/assets/81b4a732-961c-4650-8a1e-98a9c62e6ee0" />
+
 1. Visit [hits.cspc.me](https://hits.cspc.me)
 2. Customize your widget settings:
    - Choose between light and dark theme
