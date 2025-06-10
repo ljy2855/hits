@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub 방문자 수 위젯 생성기</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold text-center mb-8">GitHub 방문자 수 위젯 생성기</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- 위젯 설정 폼 -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">위젯 설정</h2>
+                <form id="widgetForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">레이블</label>
+                        <input type="text" name="label" value="Visitors" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">너비</label>
+                            <input type="number" name="width" value="120" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">높이</label>
+                            <input type="number" name="height" value="20" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">폰트</label>
+                            <select name="font_family" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="Arial">Arial</option>
+                                <option value="Verdana">Verdana</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">모서리 둥글기</label>
+                            <input type="number" name="border_radius" value="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Float 효과 (그림자)</label>
+                            <input type="number" name="float_effect" value="0" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">테마</label>
+                            <select name="theme" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                <option value="light">라이트</option>
+                                <option value="dark">다크</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                        위젯 생성하기
+                    </button>
+                </form>
+            </div>
+
+            <!-- 위젯 미리보기 -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-xl font-semibold mb-4">위젯 미리보기</h2>
+                <div id="preview" class="flex justify-center items-center min-h-[200px] bg-gray-50 rounded-lg">
+                    <div id="widgetPreview"></div>
+                </div>
+                
+                <div id="widgetInfo" class="mt-6 hidden">
+                    <h3 class="text-lg font-semibold mb-2">위젯 정보</h3>
+                    <div class="space-y-2">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">마크다운 코드</label>
+                            <div class="mt-1 flex rounded-md shadow-sm">
+                                <input type="text" id="markdownCode" readonly class="block w-full rounded-l-md border-gray-300 bg-gray-50">
+                                <button onclick="copyMarkdown()" class="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-sm font-medium text-gray-700 hover:bg-gray-100">
+                                    복사
+                                </button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">위젯 ID</label>
+                            <input type="text" id="widgetId" readonly class="mt-1 block w-full rounded-md border-gray-300 bg-gray-50">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Base64로 인코딩된 이미지 데이터
+        const logoImages = {
+            light: "data:image/png;base64,{{ light_logo_base64 }}",
+            dark: "data:image/png;base64,{{ dark_logo_base64 }}"
+        };
+
+        const form = document.getElementById('widgetForm');
+        const preview = document.getElementById('widgetPreview');
+        const widgetInfo = document.getElementById('widgetInfo');
+        const markdownCode = document.getElementById('markdownCode');
+        const widgetId = document.getElementById('widgetId');
+
+        // 초기 스타일 설정
+        const initialStyle = {
+            width: 120,
+            height: 20,
+            font_family: 'Arial',
+            label: 'Visitors',
+            border_radius: 3,
+            theme: 'light',
+            float_effect: 0
+        };
+
+        // 테마 색상 가져오기
+        function getThemeColors(theme) {
+            const themes = {
+                "light": {
+                    "bg": "#f6f8fa",
+                    "text": "#24292f",
+                    "border": "#d0d7de",
+                    "logo": "light",
+                    "section_bg": "#f6f8fa",
+                    "label_bg": "#6e7681",
+                    "label_text": "#ffffff"
+                },
+                "dark": {
+                    "bg": "#0d1117",
+                    "text": "#c9d1d9",
+                    "border": "#30363d",
+                    "logo": "dark",
+                    "section_bg": "#161b22",
+                    "label_bg": "#ffffff",
+                    "label_text": "#24292f"
+                }
+            };
+            return themes[theme] || themes["light"];
+        }
+
+        // SVG 생성 함수
+        function generateWidgetSVG(data, style) {
+            const themeColors = getThemeColors(style.theme);
+            const count = data.count;
+            
+            // 로고 크기 계산 (높이의 80%)
+            const logoSize = Math.floor(style.height * 0.8);
+            
+            // 고정된 폰트 크기
+            const fontSize = 12;
+            
+            // 좌측 로고 섹션의 너비 계산
+            const logoSectionWidth = logoSize + 15; // 로고 크기 + 좌우 패딩
+
+            const labelX = logoSectionWidth + 10; // 로고 섹션 끝 + 우측 섹션 내 좌측 패딩
+            const counterX = style.width - 10;
+
+            // 그림자 효과를 위한 필터 정의
+            let shadowFilter = "";
+            if (style.float_effect > 0) {
+                shadowFilter = `filter="drop-shadow(0px ${style.float_effect}px ${style.float_effect * 2}px rgba(0, 0, 0, 0.2))"`;
+            }
+
+            // GitHub 로고 이미지 URL (Base64)
+            const logoUrl = logoImages[themeColors.logo];
+
+            // border radius 값
+            const radius = style.border_radius;
+
+            return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${style.width}" height="${style.height}" ${shadowFilter}>
+                <defs>
+                    <clipPath id="widget-clip">
+                        <rect x="0" y="0" width="${style.width}" height="${style.height}" rx="${radius}" ry="${radius}"/>
+                    </clipPath>
+                </defs>
+                <style>
+                    .counter {
+                        font-family: ${style.font_family}, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+                        font-size: ${fontSize}px;
+                        font-weight: 600;
+                    }
+                    .label {
+                        font-family: ${style.font_family}, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+                        font-size: ${fontSize}px;
+                        font-weight: 400;
+                    }
+                </style>
+                <g clip-path="url(#widget-clip)">
+                    <!-- 전체 배경 -->
+                    <rect x="0" y="0" width="${style.width}" height="${style.height}" fill="${themeColors.bg}"/>
+                    
+                    <!-- 좌측 로고 섹션 -->
+                    <rect x="0" y="0" width="${logoSectionWidth}" height="${style.height}" fill="${themeColors.section_bg}"/>
+                    
+                    <!-- 우측 레이블 섹션 -->
+                    <rect x="${logoSectionWidth}" y="0" width="${style.width - logoSectionWidth}" height="${style.height}" fill="${themeColors.label_bg}"/>
+                    
+                    <!-- GitHub 로고 이미지 -->
+                    <image xlink:href="${logoUrl}" x="5" y="${style.height/2 - logoSize/2}" width="${logoSize}" height="${logoSize}"/>
+                    <text x="${labelX}" y="${style.height/2 + fontSize/3}" class="label" fill="${themeColors.label_text}">${style.label}:</text>
+                    <text x="${counterX}" y="${style.height/2 + fontSize/3}" class="counter" fill="${themeColors.label_text}" text-anchor="end">${count}</text>
+                </g>
+            </svg>`;
+        }
+
+        // 페이지 로드 시 초기 미리보기 생성
+        window.addEventListener('load', () => {
+            const data = { count: 0 };
+            const svg = generateWidgetSVG(data, initialStyle);
+            const blob = new Blob([svg], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            preview.data = url;
+            preview.onload = () => {
+                URL.revokeObjectURL(url);
+            };
+        });
+
+        // 함수: 현재 폼 값으로 미리보기 업데이트
+        function updatePreview() {
+            const formData = new FormData(form);
+            const style = {
+                width: parseInt(formData.get('width')) || 120,
+                height: parseInt(formData.get('height')) || 20,
+                font_family: formData.get('font_family') || 'Arial',
+                label: formData.get('label') || 'Visitors',
+                border_radius: parseInt(formData.get('border_radius')) || 3,
+                theme: formData.get('theme') || 'light',
+                float_effect: parseInt(formData.get('float_effect')) || 0
+            };
+
+            console.log('Style:', style); // 디버깅을 위한 로그
+
+            const data = { count: 0 }; // 미리보기는 항상 0으로 표시
+            const svg = generateWidgetSVG(data, style);
+            
+            // SVG를 직접 DOM에 삽입
+            preview.innerHTML = svg;
+        }
+
+        // 페이지 로드 시 초기 미리보기 업데이트
+        updatePreview();
+
+        // 폼 입력 변경 시 미리보기 업데이트
+        form.addEventListener('input', (e) => {
+            console.log('Form input changed:', e.target.name, e.target.value); // 디버깅을 위한 로그
+            updatePreview();
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            data.width = parseInt(data.width);
+            data.height = parseInt(data.height);
+            data.border_radius = parseInt(data.border_radius);
+            data.float_effect = parseInt(data.float_effect);
+
+            try {
+                const response = await fetch('/create-widget', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data),
+                });
+                const result = await response.json();
+                
+                // 위젯 정보 표시
+                widgetInfo.classList.remove('hidden');
+                markdownCode.value = result.markdown_code;
+                widgetId.value = result.widget_id;
+            } catch (error) {
+                console.error('Error:', error);
+                alert('위젯 생성 중 오류가 발생했습니다.');
+            }
+        });
+
+        function copyMarkdown() {
+            markdownCode.select();
+            document.execCommand('copy');
+            alert('마크다운 코드가 복사되었습니다!');
+        }
+
+        // Pickr 초기화
+        const initPickr = (el, defaultColor) => {
+            const pickr = Pickr.create({
+                el: el,
+                theme: 'classic', // or 'monolith', or 'nano'
+                default: defaultColor,
+                swatches: [
+                    'rgba(244, 67, 54, 1)', 'rgba(233, 30, 99, 0.95)', 'rgba(156, 39, 176, 0.9)',
+                    'rgba(103, 58, 183, 0.85)', 'rgba(63, 81, 181, 0.8)', 'rgba(33, 150, 243, 0.75)',
+                    'rgba(3, 169, 244, 0.7)', 'rgba(0, 188, 212, 0.7)', 'rgba(0, 150, 136, 0.75)',
+                    'rgba(76, 175, 80, 0.8)', 'rgba(139, 195, 74, 0.85)', 'rgba(205, 220, 57, 0.9)',
+                    'rgba(255, 235, 59, 0.95)', 'rgba(255, 193, 7, 1)'
+                ],
+
+                components: {
+                    // Main components
+                    preview: true,
+                    opacity: false,
+                    hue: true,
+
+                    // Input / output Options
+                    interaction: {
+                        hex: true,
+                        rgba: false,
+                        hsla: false,
+                        hsva: false,
+                        cmyk: false,
+                        input: true,
+                        clear: false,
+                        save: true
+                    }
+                }
+            });
+
+            const updateColor = (color) => {
+                if (color) {
+                    // RGBA 값을 HEX로 변환
+                    const rgba = color.toRGBA();
+                    const hexColor = '#' + 
+                        Math.round(rgba[0]).toString(16).padStart(2, '0') +
+                        Math.round(rgba[1]).toString(16).padStart(2, '0') +
+                        Math.round(rgba[2]).toString(16).padStart(2, '0');
+                    
+                    el.value = hexColor;
+                    console.log('Color changed to:', hexColor);
+                    
+                    // form의 background_color 값을 직접 업데이트
+                    const formData = new FormData(form);
+                    formData.set('background_color', hexColor);
+                    
+                    // 새로운 URL 생성 및 미리보기 업데이트
+                    const params = new URLSearchParams();
+                    for (let [name, value] of formData.entries()) {
+                        if (['width', 'height', 'font_size', 'border_radius', 'logo_size', 'float_effect'].includes(name)) {
+                            params.append(name, parseInt(value));
+                        } else {
+                            params.append(name, value);
+                        }
+                    }
+                    
+                    const previewUrl = `/preview-widget.svg?${params.toString()}`;
+                    console.log('Preview URL:', previewUrl);
+                    preview.data = previewUrl;
+                }
+            };
+
+            pickr.on('change', updateColor);
+            pickr.on('save', updateColor);
+
+            return pickr;
+        };
+
+        initPickr(document.getElementById('background_color_input'), '#f0f0f0');
+    </script>
+</body>
+</html> 
