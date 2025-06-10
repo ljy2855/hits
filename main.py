@@ -15,7 +15,7 @@ from bson import ObjectId
 app = FastAPI()
 
 # MongoDB 연결 설정
-MONGODB_URL = "mongodb://localhost:27017"
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
 client = AsyncIOMotorClient(MONGODB_URL)
 db = client.hits_db
 widgets_collection = db.widgets
