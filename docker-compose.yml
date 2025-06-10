@@ -5,7 +5,7 @@ services:
     image: cocopam/hits
     container_name: hits-app
     ports:
-      - "8000:8000"
+      - "8023:8000"
     environment:
       - MONGODB_URL=mongodb://mongodb:27017
     depends_on:
