@@ -173,8 +173,8 @@ async def create_widget(request: Request, style: WidgetStyle = None):
     host = request.headers.get("host", "your-server-address")
     base_url = f"https://{host}"
     
-    # Add cache parameter to bypass cache
-    widget_url = f"/widget/{widget_id}/count.svg?cache=0"
+    # Use a path-based approach instead of query parameters
+    widget_url = f"/widget/profile/{widget_id}/count.svg"
     
     return {
         "widget_id": widget_id,
@@ -191,6 +191,10 @@ async def get_widget_count(widget_id: str):
     return data
 
 @app.get("/widget/{widget_id}/count.svg")
+async def get_widget_svg_legacy(widget_id: str):
+    return await get_widget_svg(widget_id)
+
+@app.get("/widget/profile/{widget_id}/count.svg")
 async def get_widget_svg(widget_id: str):
     data = await get_visitor_count(widget_id)
     if not data:
