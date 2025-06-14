@@ -11,11 +11,7 @@ RUN pip install --no-cache-dir uv==0.6.3 && \
     uv sync --no-dev
 
 # Copy static and templates directories
-COPY static ./static/
-COPY templates ./templates/
-
-# Copy main application file
-COPY main.py ./
+COPY server /app/
 
 ENV ENVIRONMENT=production
 ENV PYTHONUNBUFFERED=1

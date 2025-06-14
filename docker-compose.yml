@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    image: cocopam/hits
+    build: .
     container_name: hits-app
     ports:
       - "8023:8000"
