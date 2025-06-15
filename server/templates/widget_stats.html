@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>위젯 통계 - GitHub 방문자 수 위젯</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 탭 UI -->
+    <div class="container mx-auto px-4 pt-8">
+        <div class="flex border-b mb-8">
+            <a href="/" class="tab-btn px-4 py-2 -mb-px border-b-2 font-semibold text-gray-700 border-transparent hover:text-blue-600 focus:outline-none">위젯 생성</a>
+            <a href="/my-widgets" class="tab-btn px-4 py-2 -mb-px border-b-2 font-semibold text-gray-700 border-transparent hover:text-blue-600 focus:outline-none">내 위젯</a>
+            <button class="tab-btn px-4 py-2 -mb-px border-b-2 font-semibold text-gray-700 border-blue-600 focus:outline-none">통계</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <div id="userInfo" class="mb-8 hidden">
+            <div class="flex items-center gap-4 bg-white p-4 rounded-lg shadow">
+                <img id="userAvatar" class="w-12 h-12 rounded-full" src="" alt="User avatar">
+                <div>
+                    <h2 id="userName" class="text-xl font-semibold"></h2>
+                    <p class="text-gray-600">GitHub 계정</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- 일별 방문자 수 -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold mb-4">일별 방문자 수</h3>
+                <canvas id="dailyChart"></canvas>
+            </div>
+
+            <!-- 시간별 방문자 수 -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h3 class="text-lg font-semibold mb-4">시간별 방문자 수</h3>
+                <canvas id="hourlyChart"></canvas>
+            </div>
+
+            <!-- 도메인별 방문자 수 -->
+            <div class="bg-white p-6 rounded-lg shadow-md md:col-span-2">
+                <h3 class="text-lg font-semibold mb-4">도메인별 방문자 수</h3>
+                <canvas id="domainChart"></canvas>
+            </div>
+        </div>
+
+        <div id="loadingMessage" class="text-center text-gray-500 py-8">
+            통계 데이터를 불러오는 중...
+        </div>
+
+        <div id="errorMessage" class="text-center text-red-500 py-8 hidden">
+            통계 데이터를 불러오는데 실패했습니다.
+        </div>
+    </div>
+
+    <script>
+        const widgetId = "{{ widget_id }}";
+        let dailyChart, hourlyChart, domainChart;
+
+        // 사용자 정보 확인
+        async function checkUserStatus() {
+            try {
+                const response = await fetch('/auth/status');
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    document.getElementById('userInfo').classList.remove('hidden');
+                    document.getElementById('userAvatar').src = data.avatar_url;
+                    document.getElementById('userName').textContent = data.login;
+                    loadWidgetStats();
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error checking user status:', error);
+                document.getElementById('errorMessage').classList.remove('hidden');
+            }
+        }
+
+        // 위젯 통계 데이터 불러오기
+        async function loadWidgetStats() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            const errorMessage = document.getElementById('errorMessage');
+
+            try {
+                const response = await fetch(`/widget/${widgetId}/stats`);
+                if (!response.ok) throw new Error('통계 데이터를 불러올 수 없습니다.');
+                
+                const data = await response.json();
+                loadingMessage.classList.add('hidden');
+
+                // 일별 방문자 수 차트
+                const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+                dailyChart = new Chart(dailyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.daily_stats.map(stat => stat.date),
+                        datasets: [{
+                            label: '방문자 수',
+                            data: data.daily_stats.map(stat => stat.count),
+                            borderColor: 'rgb(59, 130, 246)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 시간별 방문자 수 차트
+                const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+                hourlyChart = new Chart(hourlyCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.hourly_stats.map(stat => stat.hour),
+                        datasets: [{
+                            label: '방문자 수',
+                            data: data.hourly_stats.map(stat => stat.count),
+                            borderColor: 'rgb(16, 185, 129)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 도메인별 방문자 수 차트
+                const domainCtx = document.getElementById('domainChart').getContext('2d');
+                domainChart = new Chart(domainCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.domain_stats.map(stat => stat.domain),
+                        datasets: [{
+                            label: '방문자 수',
+                            data: data.domain_stats.map(stat => stat.count),
+                            backgroundColor: 'rgb(99, 102, 241)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                loadingMessage.classList.add('hidden');
+                errorMessage.classList.remove('hidden');
+            }
+        }
+
+        // 페이지 로드 시 사용자 상태 확인
+        window.addEventListener('load', checkUserStatus);
+    </script>
+</body>
+</html> 

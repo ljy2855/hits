@@ -18,6 +18,8 @@ services:
       - mongodb_data:/data/db
     environment:
       - MONGO_INITDB_DATABASE=hits_db
+    ports:
+      - "27017:27017"
 
 volumes:
   mongodb_data: 

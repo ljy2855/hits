@@ -7,6 +7,7 @@ import base64
 from server.routes.widget import router as widget_router
 from server.services.widget_service import get_visitor_count, save_widget_data
 from server.models.widget import WidgetConfig
+from .routes import auth
 
 app = FastAPI()
 
@@ -16,6 +17,7 @@ templates = Jinja2Templates(directory="server/templates")
 
 # 라우터 등록
 app.include_router(widget_router)
+app.include_router(auth.router, prefix="/auth")
 
 @app.middleware("http")
 async def count_visitors(request: Request, call_next):

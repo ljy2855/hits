@@ -10,4 +10,5 @@ class WidgetStyle(BaseModel):
     float_effect: int = 0
 
 class WidgetConfig(BaseModel):
-    style: WidgetStyle = WidgetStyle() 
+    style: WidgetStyle = WidgetStyle()
+    user_id: str | None = None  # 위젯을 생성한 사용자의 ID (선택사항) 

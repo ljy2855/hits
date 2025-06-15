@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 위젯 목록 - GitHub 방문자 수 위젯</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 탭 UI -->
+    <div class="container mx-auto px-4 pt-8">
+        <div class="flex border-b mb-8">
+            <a href="/" id="tab-create" class="tab-btn px-4 py-2 -mb-px border-b-2 font-semibold text-gray-700 border-transparent hover:text-blue-600 focus:outline-none">위젯 생성</a>
+            <button id="tab-mywidgets" class="tab-btn px-4 py-2 -mb-px border-b-2 font-semibold text-gray-700 border-blue-600 focus:outline-none">내 위젯</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto px-4 py-8">
+        <div id="userInfo" class="mb-8 hidden">
+            <div class="flex items-center gap-4 bg-white p-4 rounded-lg shadow">
+                <img id="userAvatar" class="w-12 h-12 rounded-full" src="" alt="User avatar">
+                <div>
+                    <h2 id="userName" class="text-xl font-semibold"></h2>
+                    <p class="text-gray-600">GitHub 계정</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="widgetsList" class="space-y-4">
+            <!-- 위젯 목록이 여기에 동적으로 추가됩니다 -->
+        </div>
+
+        <div id="loadingMessage" class="text-center text-gray-500 py-8">
+            위젯 목록을 불러오는 중...
+        </div>
+
+        <div id="errorMessage" class="text-center text-red-500 py-8 hidden">
+            위젯 목록을 불러오는데 실패했습니다.
+        </div>
+    </div>
+
+    <script>
+        let charts = {};
+
+        // 사용자 정보 확인
+        async function checkUserStatus() {
+            try {
+                const response = await fetch('/auth/status');
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    document.getElementById('userInfo').classList.remove('hidden');
+                    document.getElementById('userAvatar').src = data.avatar_url;
+                    document.getElementById('userName').textContent = data.login;
+                    loadUserWidgets(data.login);
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (error) {
+                console.error('Error checking user status:', error);
+                document.getElementById('errorMessage').classList.remove('hidden');
+            }
+        }
+
+        // 사용자의 위젯 목록 불러오기
+        async function loadUserWidgets(username) {
+            const widgetsList = document.getElementById('widgetsList');
+            const loadingMessage = document.getElementById('loadingMessage');
+            const errorMessage = document.getElementById('errorMessage');
+
+            try {
+                const response = await fetch(`/user/${username}/widgets`);
+                if (!response.ok) throw new Error('위젯 목록을 불러올 수 없습니다.');
+                
+                const data = await response.json();
+                loadingMessage.classList.add('hidden');
+
+                if (!data.widgets || data.widgets.length === 0) {
+                    widgetsList.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            아직 생성한 위젯이 없습니다.
+                        </div>
+                    `;
+                    return;
+                }
+
+                widgetsList.innerHTML = data.widgets.map(widget => `
+                    <div class="bg-white p-6 rounded-lg shadow-md" data-widget-id="${widget.widget_id}">
+                        <div class="flex flex-col md:flex-row md:items-center gap-4">
+                            <div class="flex-1">
+                                <div class="mb-2">
+                                    <span class="text-sm text-gray-500">위젯 ID:</span>
+                                    <span class="font-mono">${widget.widget_id}</span>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">마크다운 코드</label>
+                                    <div class="flex gap-2">
+                                        <input type="text" value="![Visitor Count](https://${window.location.host}/widget/profile/${widget.widget_id})" 
+                                               readonly class="flex-1 bg-gray-50 border border-gray-300 rounded px-3 py-2 text-sm">
+                                        <button onclick="copyMarkdown(this)" 
+                                                class="bg-gray-100 text-gray-700 px-3 py-2 rounded hover:bg-gray-200">
+                                            복사
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="mt-4">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-2">최근 방문자 통계</h4>
+                                    <div class="h-32">
+                                        <canvas id="chart-${widget.widget_id}"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="deleteWidget('${widget.widget_id}')" 
+                                        class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600">
+                                    삭제
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // 각 위젯의 통계 데이터 로드
+                for (const widget of data.widgets) {
+                    loadWidgetStats(widget.widget_id);
+                }
+            } catch (error) {
+                console.error('Error loading widgets:', error);
+                loadingMessage.classList.add('hidden');
+                errorMessage.classList.remove('hidden');
+            }
+        }
+
+        // 위젯 통계 데이터 불러오기
+        async function loadWidgetStats(widgetId) {
+            try {
+                const response = await fetch(`/widget/${widgetId}/stats`);
+                if (!response.ok) throw new Error('통계 데이터를 불러올 수 없습니다.');
+                
+                const data = await response.json();
+                
+                // 기존 차트가 있다면 제거
+                if (charts[widgetId]) {
+                    charts[widgetId].destroy();
+                }
+
+                // 새로운 차트 생성
+                const ctx = document.getElementById(`chart-${widgetId}`).getContext('2d');
+                charts[widgetId] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.daily_stats.map(stat => stat.date),
+                        datasets: [{
+                            label: '방문자 수',
+                            data: data.daily_stats.map(stat => stat.count),
+                            borderColor: 'rgb(59, 130, 246)',
+                            tension: 0.4,
+                            fill: true,
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            x: {
+                                display: false
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // 마크다운 코드 복사
+        function copyMarkdown(button) {
+            const input = button.previousElementSibling;
+            input.select();
+            document.execCommand('copy');
+            
+            const originalText = button.textContent;
+            button.textContent = '복사됨!';
+            setTimeout(() => {
+                button.textContent = originalText;
+            }, 2000);
+        }
+
+        // 위젯 삭제
+        async function deleteWidget(widgetId) {
+            if (!confirm('정말로 이 위젯을 삭제하시겠습니까?')) return;
+
+            try {
+                const response = await fetch(`/widget/${widgetId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '위젯 삭제에 실패했습니다.');
+                }
+
+                // 삭제된 위젯 요소 제거
+                const widgetElement = document.querySelector(`[data-widget-id="${widgetId}"]`);
+                if (widgetElement) {
+                    widgetElement.remove();
+                }
+
+                // 차트 제거
+                if (charts[widgetId]) {
+                    charts[widgetId].destroy();
+                    delete charts[widgetId];
+                }
+
+                // 위젯 목록이 비어있는지 확인
+                const widgetsList = document.getElementById('widgetsList');
+                if (widgetsList.children.length === 0) {
+                    widgetsList.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            아직 생성한 위젯이 없습니다.
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error deleting widget:', error);
+                alert(error.message || '위젯 삭제에 실패했습니다.');
+            }
+        }
+
+        // 페이지 로드 시 사용자 상태 확인
+        window.addEventListener('load', checkUserStatus);
+    </script>
+</body>
+</html> 

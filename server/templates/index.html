@@ -5,11 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub 방문자 수 위젯 생성기</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/classic.min.css">
 </head>
 <body class="bg-gray-100 min-h-screen">
-    <div class="container mx-auto px-4 py-8">
+    <!-- 탭 UI -->
+    <div class="container mx-auto px-4 pt-8">
+        <div class="flex border-b mb-8">
+            <button id="tab-create" class="tab-btn px-4 py-2 -mb-px border-b-2 font-semibold text-gray-700 border-blue-600 focus:outline-none">위젯 생성</button>
+            <a href="/my-widgets" id="tab-mywidgets" class="tab-btn px-4 py-2 -mb-px border-b-2 font-semibold text-gray-700 border-transparent hover:text-blue-600 focus:outline-none hidden">내 위젯</a>
+        </div>
+    </div>
+    <!-- 위젯 생성 섹션 -->
+    <div id="section-create" class="container mx-auto px-4 py-8">
         <h1 class="text-3xl font-bold text-center mb-8">GitHub 방문자 수 위젯 생성기</h1>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -20,6 +26,23 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700">레이블</label>
                         <input type="text" name="label" value="Visitors" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    </div>
+                    
+                    <div id="githubAuthSection">
+                        <div id="loginButton" class="mb-4">
+                            <button type="button" onclick="loginWithGitHub()" class="w-full flex items-center justify-center gap-2 bg-gray-800 text-white py-2 px-4 rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path fill-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clip-rule="evenodd"/>
+                                </svg>
+                                GitHub으로 로그인
+                            </button>
+                        </div>
+                        <div id="userInfo" class="hidden">
+                            <div class="flex items-center gap-2 mb-2">
+                                <img id="userAvatar" class="w-8 h-8 rounded-full" src="" alt="User avatar">
+                                <span id="userName" class="text-sm font-medium"></span>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-4">
@@ -97,6 +120,32 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+    <!-- 내 위젯 섹션 (로그인 시에만 보임) -->
+    <div id="section-mywidgets" class="container mx-auto px-4 py-8 hidden">
+        <h2 class="text-xl font-semibold mb-4">내 위젯</h2>
+        <div id="myWidgetsList" class="space-y-4"></div>
+    </div>
+
+    <!-- 리더보드 섹션 -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-semibold mb-4">인기 위젯 리더보드</h2>
+            <div id="leaderboardTable" class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">순위</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">GitHub 사용자</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">방문자 수</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody" class="bg-white divide-y divide-gray-200">
+                        <!-- 여기에 리더보드 데이터가 동적으로 추가됩니다 -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -215,7 +264,56 @@
             </svg>`;
         }
 
-        // 페이지 로드 시 초기 미리보기 생성
+        // 리더보드 생성
+        async function createLeaderboard() {
+            try {
+                const response = await fetch('/widget/leaderboard');
+                if (!response.ok) throw new Error('리더보드 데이터를 불러올 수 없습니다.');
+                
+                const data = await response.json();
+                console.log('Leaderboard data:', data);  // 디버깅용
+                
+                if (!data.users || data.users.length === 0) {
+                    const leaderboardBody = document.getElementById('leaderboardBody');
+                    leaderboardBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="px-6 py-4 text-center text-gray-500">
+                                아직 방문자 통계가 없습니다.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                // 리더보드 테이블 생성
+                const leaderboardBody = document.getElementById('leaderboardBody');
+                leaderboardBody.innerHTML = data.users.map((user, index) => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500">
+                            #${index + 1}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${user.user_id}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">
+                            ${user.count}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading leaderboard:', error);
+                const leaderboardBody = document.getElementById('leaderboardBody');
+                leaderboardBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="px-6 py-4 text-center text-red-500">
+                            리더보드를 불러오는데 실패했습니다.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        // 페이지 로드 시 초기 미리보기 업데이트 및 리더보드 생성
         window.addEventListener('load', () => {
             const data = { count: 0 };
             const svg = generateWidgetSVG(data, initialStyle);
@@ -225,6 +323,8 @@
             preview.onload = () => {
                 URL.revokeObjectURL(url);
             };
+            checkUserStatus();
+            createLeaderboard();
         });
 
         // 함수: 현재 폼 값으로 미리보기 업데이트
@@ -262,6 +362,8 @@
             e.preventDefault();
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
+            
+            // 숫자 필드 변환
             data.width = parseInt(data.width);
             data.height = parseInt(data.height);
             data.border_radius = parseInt(data.border_radius);
@@ -275,6 +377,12 @@
                     },
                     body: JSON.stringify(data),
                 });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || '위젯 생성 중 오류가 발생했습니다.');
+                }
+                
                 const result = await response.json();
                 
                 // 위젯 정보 표시
@@ -283,7 +391,7 @@
                 widgetId.value = result.widget_id;
             } catch (error) {
                 console.error('Error:', error);
-                alert('위젯 생성 중 오류가 발생했습니다.');
+                alert(error.message || '위젯 생성 중 오류가 발생했습니다.');
             }
         });
 
@@ -293,79 +401,47 @@
             alert('마크다운 코드가 복사되었습니다!');
         }
 
-        // Pickr 초기화
-        const initPickr = (el, defaultColor) => {
-            const pickr = Pickr.create({
-                el: el,
-                theme: 'classic', // or 'monolith', or 'nano'
-                default: defaultColor,
-                swatches: [
-                    'rgba(244, 67, 54, 1)', 'rgba(233, 30, 99, 0.95)', 'rgba(156, 39, 176, 0.9)',
-                    'rgba(103, 58, 183, 0.85)', 'rgba(63, 81, 181, 0.8)', 'rgba(33, 150, 243, 0.75)',
-                    'rgba(3, 169, 244, 0.7)', 'rgba(0, 188, 212, 0.7)', 'rgba(0, 150, 136, 0.75)',
-                    'rgba(76, 175, 80, 0.8)', 'rgba(139, 195, 74, 0.85)', 'rgba(205, 220, 57, 0.9)',
-                    'rgba(255, 235, 59, 0.95)', 'rgba(255, 193, 7, 1)'
-                ],
+        // GitHub OAuth 관련 함수들
+        function loginWithGitHub() {
+            window.location.href = '/auth/github';
+        }
 
-                components: {
-                    // Main components
-                    preview: true,
-                    opacity: false,
-                    hue: true,
+        // 탭 전환 로직
+        const tabCreate = document.getElementById('tab-create');
+        const tabMyWidgets = document.getElementById('tab-mywidgets');
+        const sectionCreate = document.getElementById('section-create');
+        const sectionMyWidgets = document.getElementById('section-mywidgets');
 
-                    // Input / output Options
-                    interaction: {
-                        hex: true,
-                        rgba: false,
-                        hsla: false,
-                        hsva: false,
-                        cmyk: false,
-                        input: true,
-                        clear: false,
-                        save: true
-                    }
+        tabCreate.addEventListener('click', () => {
+            tabCreate.classList.add('border-blue-600');
+            tabMyWidgets.classList.remove('border-blue-600');
+            sectionCreate.classList.remove('hidden');
+            sectionMyWidgets.classList.add('hidden');
+        });
+        tabMyWidgets.addEventListener('click', () => {
+            tabMyWidgets.classList.add('border-blue-600');
+            tabCreate.classList.remove('border-blue-600');
+            sectionCreate.classList.add('hidden');
+            sectionMyWidgets.classList.remove('hidden');
+        });
+
+        // 로그인 상태에 따라 탭 표시
+        async function checkUserStatus() {
+            try {
+                const response = await fetch('/auth/status');
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    document.getElementById('loginButton').classList.add('hidden');
+                    document.getElementById('userInfo').classList.remove('hidden');
+                    document.getElementById('userAvatar').src = data.avatar_url;
+                    document.getElementById('userName').textContent = data.login;
+                    document.getElementById('tab-mywidgets').classList.remove('hidden');
                 }
-            });
-
-            const updateColor = (color) => {
-                if (color) {
-                    // RGBA 값을 HEX로 변환
-                    const rgba = color.toRGBA();
-                    const hexColor = '#' + 
-                        Math.round(rgba[0]).toString(16).padStart(2, '0') +
-                        Math.round(rgba[1]).toString(16).padStart(2, '0') +
-                        Math.round(rgba[2]).toString(16).padStart(2, '0');
-                    
-                    el.value = hexColor;
-                    console.log('Color changed to:', hexColor);
-                    
-                    // form의 background_color 값을 직접 업데이트
-                    const formData = new FormData(form);
-                    formData.set('background_color', hexColor);
-                    
-                    // 새로운 URL 생성 및 미리보기 업데이트
-                    const params = new URLSearchParams();
-                    for (let [name, value] of formData.entries()) {
-                        if (['width', 'height', 'font_size', 'border_radius', 'logo_size', 'float_effect'].includes(name)) {
-                            params.append(name, parseInt(value));
-                        } else {
-                            params.append(name, value);
-                        }
-                    }
-                    
-                    const previewUrl = `/preview-widget.svg?${params.toString()}`;
-                    console.log('Preview URL:', previewUrl);
-                    preview.data = previewUrl;
-                }
-            };
-
-            pickr.on('change', updateColor);
-            pickr.on('save', updateColor);
-
-            return pickr;
-        };
-
-        initPickr(document.getElementById('background_color_input'), '#f0f0f0');
+            } catch (error) {
+                console.error('Error checking user status:', error);
+            }
+        }
     </script>
 </body>
 </html> 
