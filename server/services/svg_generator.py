@@ -15,7 +15,7 @@ async def generate_github_style_svg(data: dict, style: WidgetStyle) -> str:
     font_size = 12
     
     # GitHub 로고 PNG 파일 읽기 및 Base64 인코딩
-    logo_file_path = os.path.join("static", "images", f"github-logo-{theme_colors['logo']}.png")
+    logo_file_path = os.path.join("server/static", "images", f"github-logo-{theme_colors['logo']}.png")
     encoded_logo = ""
     try:
         async with aiofiles.open(logo_file_path, mode="rb") as f:
